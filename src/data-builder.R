@@ -12,7 +12,7 @@ setwd("/home/muca10/Documents/lavir-db/data/")
 #https://www.bv-brc.org/api/doc/
 
 get_df_web = function(link){
-  return(read.csv(stringr::str_replace_all(link, " ", "%20"), sep="\t" ))
+  return(read.csv(stringr::str_replace_all(link, " ", "%20"), sep="\t", stringsAsFactors = T ))
 }
 
 parse_bvbrc_country = function(country = ""){
@@ -31,7 +31,7 @@ parse_bvbrc_country = function(country = ""){
     link_query = c(link_query, paste0(link_base, aux, link_sufix))
   }
   print(link_query)
-  cl = makeCluster(detectCores()*2)
+  cl = makeCluster(detectCores()*5)
   dataframes = parLapply(cl, link_query, get_df_web)
   stopCluster(cl)
   print(paste0("Downloaded, parsing data from ",country,"!"))
@@ -49,22 +49,42 @@ for (ctr in latin_countries) {
   write_csv(dataset, paste0(ctr,"_ViPR_DB.csv"))
 }
 
-filtered_public <- Filter(function(x) x != "", unique(as.character(pmids)))
-filtered_public <- unlist(lapply(filtered_public, function(x) strsplit(x, ",")[[1]][1]))
-print(filtered_public)
+filtered_public <- unlist(lapply(pmids, function(x) strsplit(x, ",")[[1]][1]))
+filtered_public <- Filter(function(x) x != "", unique(as.character(filtered_public)))
+write_lines(filtered_public, "pmids.txt")
+#filtered_public = read_lines("pmids.txt")
 
 get_pubmed_info <- function(pmid) {
-  summary <- entrez_summary(db = "pubmed", id = pmid)
-  author <- summary$sortfirstauthor
-  laut <- summary$lastauthor
-  doi <- (summary$articleids %>% filter(idtype == "doi") )$value
-  pub_date <- summary$history$date[2]
-  list(pmid = pmid, author = author, last_author = laut, doi = doi, publication_date = pub_date)
+  result <- tryCatch({
+    summary <- entrez_summary(db = "pubmed", id = pmid)
+    author <- summary$sortfirstauthor
+    laut <- summary$lastauthor
+    doi <- (summary$articleids %>% filter(idtype == "doi") )$value
+    pub_date <- summary$history$date[2]
+    message(paste0("pmid found: ", pmid))
+    data.frame(pmid = pmid, author = author, last_author = laut, doi = doi, publication_date = pub_date)
+  }, error = function(e) {
+    message("An error occurred:", conditionMessage(e))
+    return(data.frame(pmid = pmid, author = "", last_author = "", doi = "", publication_date = ""))
+  }, warning = function(w) {
+    message("A warning occurred:", conditionMessage(w))
+    return(data.frame(pmid = pmid, author = "", last_author = "", doi = "", publication_date = ""))
+  })
+  return(result)
 }
 
 NCBI_data = sapply(filtered_public, get_pubmed_info)
-NCBI_data = t(as.data.frame(NCBI_data))
-write.csv(NCBI_data, "pubmed.csv", row.names = F)
+NCBI_data = as.data.frame(t(NCBI_data))
+NCBI_data = NCBI_data[NCBI_data$last_author != "",]
+
+NCBI_data$pmid<- sapply(NCBI_data$pmid, paste, collapse = ", ")
+NCBI_data$author <- sapply(NCBI_data$author, paste, collapse = ", ")
+NCBI_data$last_author <- sapply(NCBI_data$last_author, paste, collapse = ", ")
+NCBI_data$doi<- sapply(NCBI_data$doi, paste, collapse = ", ")
+NCBI_data$publication_date <- sapply(NCBI_data$publication_date, paste, collapse = ", ")
+
+write.csv(NCBI_data, "pubmed.csv", row.names = FALSE)
+
 
 latitude <- c(-34.61, -16.29, -14.24, -33.45, 4.61, 9.93, 23.13, 18.73, -0.23, 13.79, 14.63, 18.97, 15.2, 23.63, 
               12.87, 8.98, -23.43, -9.19, 18.22, -32.53, 6.42)
