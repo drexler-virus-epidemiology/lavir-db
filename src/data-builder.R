@@ -24,7 +24,7 @@ parse_bvbrc_country = function(country = ""){
     aux = paste0("and(and(eq(superkingdom,Viruses),eq(collection_year,",year,")),eq(isolation_country,",country,"))")
     link_query = c(link_query, paste0(link_base, aux, link_sufix))
   }
-  aux = paste0("and(eq(isolation_country,",country,"),ne(collection_year,*))")
+  aux = paste0("and(and(eq(superkingdom,Viruses),eq(isolation_country,",country,")),ne(collection_year,*))")
   link_query = c(link_query, paste0(link_base, aux, link_sufix))
   for (year in as.character(2020:as.numeric(format(Sys.Date(), "%Y")))) {
     aux = paste0('and(eq(superkingdom,Viruses),ne(genome_name,Severe acute respiratory syndrome coronavirus 2),eq(collection_year,',year,"),eq(isolation_country,",country,"))")
@@ -57,18 +57,19 @@ write_lines(filtered_public, "pmids.txt")
 get_pubmed_info <- function(pmid) {
   result <- tryCatch({
     summary <- entrez_summary(db = "pubmed", id = pmid)
+    title <- summary$title
     author <- summary$sortfirstauthor
     laut <- summary$lastauthor
     doi <- (summary$articleids %>% filter(idtype == "doi") )$value
     pub_date <- summary$history$date[2]
     message(paste0("pmid found: ", pmid))
-    data.frame(pmid = pmid, author = author, last_author = laut, doi = doi, publication_date = pub_date)
+    data.frame(pmid = pmid, title = title, author = author, last_author = laut, doi = doi, publication_date = pub_date)
   }, error = function(e) {
     message("An error occurred:", conditionMessage(e))
-    return(data.frame(pmid = pmid, author = "", last_author = "", doi = "", publication_date = ""))
+    return(data.frame(pmid = pmid, title = "", author = "", last_author = "", doi = "", publication_date = ""))
   }, warning = function(w) {
     message("A warning occurred:", conditionMessage(w))
-    return(data.frame(pmid = pmid, author = "", last_author = "", doi = "", publication_date = ""))
+    return(data.frame(pmid = pmid, title = "", author = "", last_author = "", doi = "", publication_date = ""))
   })
   return(result)
 }
@@ -78,6 +79,7 @@ NCBI_data = as.data.frame(t(NCBI_data))
 NCBI_data = NCBI_data[NCBI_data$last_author != "",]
 
 NCBI_data$pmid<- sapply(NCBI_data$pmid, paste, collapse = ", ")
+NCBI_data$title <- sapply(NCBI_data$title, paste, collapse = ", ")
 NCBI_data$author <- sapply(NCBI_data$author, paste, collapse = ", ")
 NCBI_data$last_author <- sapply(NCBI_data$last_author, paste, collapse = ", ")
 NCBI_data$doi<- sapply(NCBI_data$doi, paste, collapse = ", ")
@@ -85,13 +87,3 @@ NCBI_data$publication_date <- sapply(NCBI_data$publication_date, paste, collapse
 
 write.csv(NCBI_data, "pubmed.csv", row.names = FALSE)
 
-
-latitude <- c(-34.61, -16.29, -14.24, -33.45, 4.61, 9.93, 23.13, 18.73, -0.23, 13.79, 14.63, 18.97, 15.2, 23.63, 
-              12.87, 8.98, -23.43, -9.19, 18.22, -32.53, 6.42)
-
-longitude <- c(-58.38, -63.59, -51.92, -70.66, -74.08, -84.08, -82.36, -70.16, -78.51, -88.9, -90.51, -72.33, -86.24, 
-               -102.55, -85.21, -79.53, -58.44, -75.98, -66.03, -55.77, -66.91)
-
-country_data <- data.frame(Country = latin_countries, Latitude = latitude, Longitude = longitude)
-
-write.csv(country_data, "latin_tude.csv", row.names = F)
