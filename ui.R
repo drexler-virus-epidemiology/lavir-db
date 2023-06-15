@@ -3,18 +3,39 @@ source(file = "src/load_dependencies.R")
 ui <- gridlayout::grid_page (
 
   layout = c(
-    "header  header",
-    "sidebar_param output_area"
+    "header header",
+    "sidebar_param output_area",
+    "footer footer"
   ),
-  row_sizes = c("100px","1fr"),
+  row_sizes = c("60px", "1fr", "70px"),
   col_sizes = c("245px","1fr"),
   gap_size = "1rem",
   
   grid_card_text(
     area = "header",
-    content = "Latin America Virus Research DB",
     alignment = "start",
-    is_title = TRUE
+    is_title = TRUE,
+    content = "Latin America Virus Research DB"
+  ),
+  
+  grid_card(
+    area = "footer",
+    alignment = "start",
+    width = "100%", 
+    height =  "100%",
+    is_title = FALSE, 
+    layout_column_wrap(
+      card_image(file = "img/Logo_Charite.png", width = "150px", height = "auto"),
+      markdown(""),
+      markdown("This app is manteined by the [Drexler's Virus Epidemiology Lab](https://virologie-ccm.charite.de/en/research/ag_drexler/)."),
+      markdown(""),
+      markdown("Its source code is publicly available on [GitHub](https://github.com/drexler-virus-epidemiology/lavir-db)."),
+      markdown(""),
+      card_image(file = "img/GLACIER_German-2021.png", width = "150px", height = "auto"),  
+      fixed_width = T,
+      width = 1/7,
+      gap = "30px"
+    )
   ),
   
   grid_card (
